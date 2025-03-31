@@ -29,7 +29,7 @@ The Helm chart includes:
 - Helm 3.0+
 - HAProxy 2.4+ (included in the chart)
 - Python 3.6+ (for SPOE agent)
-- A downstream processor for event collection (optional, see [HTTP Event Processor](https://yourusername.github.io/http-event-processor/))
+- A downstream processor for event collection (optional, see [HTTP Event Processor](https://kayaman.github.io/http-event-processor/))
 
 ## Installation
 
@@ -38,7 +38,7 @@ The Helm chart includes:
 1. Add the HAProxy SPOE Sidecar Helm repository:
 
    ```bash
-   helm repo add haproxy-spoe https://yourusername.github.io/haproxy-spoe/
+   helm repo add haproxy-spoe https://kayaman.github.io/haproxy-spoe/
    helm repo update
    ```
 
@@ -153,7 +153,7 @@ spoeAgent:
 
 ## Integration with HTTP Event Processor
 
-This HAProxy SPOE Sidecar works best with the [HTTP Event Processor](https://yourusername.github.io/http-event-processor/) for storing and analyzing the captured traffic.
+This HAProxy SPOE Sidecar works best with the [HTTP Event Processor](https://kayaman.github.io/http-event-processor/) for storing and analyzing the captured traffic.
 
 To integrate with the HTTP Event Processor:
 
