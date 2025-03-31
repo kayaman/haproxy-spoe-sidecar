@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-with-haproxy-spoe
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+        - name: myapp
+          image: your-application-image
+          ports:
+            - containerPort: 8000
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+
+        - name: haproxy
+          image: haproxy:2.7
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: haproxy-config
+              mountPath: /usr/local/etc/haproxy/haproxy.cfg
+              subPath: haproxy.cfg
+            - name: haproxy-config
+              mountPath: /usr/local/etc/haproxy/spoe-http-events.conf
+              subPath: spoe-http-events.conf
+            - name: haproxy-config
+              mountPath: /usr/local/etc/haproxy/spoe.lua
+              subPath: spoe.lua
+          resources:
+            limits:
+              cpu: 300m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+
+        - name: spoe-agent
+          image: python:3.9-slim
+          command: ["python", "/app/agent.py"]
+          ports:
+            - containerPort: 9000
+          volumeMounts:
+            - name: spoe-agent-config
+              mountPath: /app/agent.py
+              subPath: agent.py
+            - name: spoe-agent-config
+              mountPath: /app/agent.conf
+              subPath: agent.conf
+          resources:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          env:
+            - name: DOWNSTREAM_URL
+              value: "http://log-processor:8080/http-events"
+
+      volumes:
+        - name: haproxy-config
+          configMap:
+            name: haproxy-config
+        - name: spoe-agent-config
+          configMap:
+            name: spoe-agent-config

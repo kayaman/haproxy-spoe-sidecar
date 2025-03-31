@@ -1,0 +1,6 @@
+apiVersion: v2
+name: haproxy-sidecar
+description: A Helm chart for deploying an application with HAProxy sidecar on Kubernetes
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

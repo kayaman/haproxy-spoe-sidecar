@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: haproxy-config
+data:
+  haproxy.cfg: |
+    global
+      log stdout format raw local0 info
+      maxconn 50000
+      user haproxy
+      group haproxy
+      # Load the SPOE module
+      lua-load /usr/local/etc/haproxy/spoe.lua
+
+    defaults
+      mode http
+      log global
+      option httplog
+      timeout connect 5s
+      timeout client 30s
+      timeout server 30s
+
+    frontend http_front
+      bind *:8080
+      default_backend app_backend
+      
+      # SPOE filter configuration
+      filter spoe engine http-events config /usr/local/etc/haproxy/spoe-http-events.conf
+      
+      # Define SPOE events
+      # Trigger SPOE processing on request reception
+      http-request send-spoe-group http-events request-group
+      # Trigger SPOE processing after response is received
+      http-response send-spoe-group http-events response-group
+
+    backend app_backend
+      server app 127.0.0.1:8000 maxconn 10000
+
+  # SPOE configuration file
+  spoe-http-events.conf: |
+    [http-events]
+    spoe-agent http-agent
+      messages request-group response-group
+      option var-prefix req
+      option dontlog-normal
+      timeout hello      3s
+      timeout idle       10s
+      timeout processing 10s
+      use-backend spoe-backend
+      
+    spoe-message request-group
+      args id=unique-id method=method path=path query=query version=req.ver headers=req.hdrs_bin body=req.body_len
+      event on-frontend-http-request
+      
+    spoe-message response-group
+      args id=unique-id status=status headers=res.hdrs_bin body=res.body_len
+      event on-http-response
+
+    # SPOE Lua script for processing
+  spoe.lua: |
+    core.register_action("send-spoe-group", {"http-req", "http-res"}, function(txn, group)
+        -- Process the transaction and prepare data for SPOE
+        -- This is a simple example - you would expand this based on your needs
+        local unique_id = txn.sf:uuid()
+        txn:set_var("txn.unique_id", unique_id)
+    end)
+
+    backend spoe-backend
+      mode tcp
+      balance roundrobin
+      option spop-check
+      server spoe-agent 127.0.0.1:9000 check
