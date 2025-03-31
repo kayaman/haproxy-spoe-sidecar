@@ -1,65 +1,243 @@
-# HAProxy SPOE Sidecar
+# HAProxy SPOE Sidecar for Kubernetes
 
-**HAProxy's Stream Processing Offload Engine (SPOE)** is a powerful feature of HAProxy that allows offloading stream processing tasks to external agents without blocking the main HAProxy process. This is ideal for your use case of capturing and forwarding HTTP requests/responses without impacting performance.
+A Helm chart for deploying HAProxy with SPOE (Stream Processing Offload Engine) as a sidecar in Kubernetes to capture and process HTTP requests and responses.
 
-## Understanding HAProxy's SPOE for HTTP Interception
+![HAProxy SPOE Flow](https://s3.us-east-1.amazonaws.com/assets.magj.dev/haproxy-spoe-sidecar-flow.svg)
 
-HAProxy's Stream Processing Offload Engine (SPOE) is an ideal solution for your requirement to intercept HTTP requests/responses without affecting performance. Here's how it works:
+## Overview
 
-### What SPOE Does
+This project provides a complete solution for intercepting HTTP traffic in your Kubernetes applications using HAProxy's Stream Processing Offload Engine (SPOE). The sidecar pattern allows you to capture both requests and responses without modifying your application code.
 
-SPOE allows HAProxy to offload processing tasks to external agents via a binary protocol:
+The Helm chart includes:
 
-1. **Non-blocking operation** - HAProxy continues processing traffic while SPOE messages are handled asynchronously
-2. **High performance** - Minimal impact on HAProxy's main process
-3. **Separation of concerns** - Processing logic lives in specialized agents
+1. HAProxy configured with SPOE module
+2. SPOE agent for processing captured traffic
+3. Integration with downstream processors
 
-### The Components
+## Features
 
-1. **HAProxy Configuration** with SPOE enabled:
+- **Non-blocking Interception**: Capture HTTP traffic without impacting performance
+- **Complete Request/Response Capture**: Get both requests and responses for complete visibility
+- **Kubernetes Integration**: Designed to work as a sidecar in Kubernetes pods
+- **Flexible Configuration**: Highly configurable through Helm values
+- **Downstream Processing**: Forward traffic copies to external systems
+- **High Performance**: Minimal overhead on your application traffic
 
-   - Defines events for capturing requests and responses
-   - Configures connection to the SPOE agent
+## Requirements
 
-2. **SPOE Agent** (written in Python):
+- Kubernetes 1.16+
+- Helm 3.0+
+- HAProxy 2.4+ (included in the chart)
+- Python 3.6+ (for SPOE agent)
+- A downstream processor for event collection (optional, see [HTTP Event Processor](https://yourusername.github.io/http-event-processor/))
 
-   - Receives binary SPOE messages from HAProxy
-   - Processes request and response data
-   - Forwards copies to your downstream processing system
+## Installation
 
-3. **Kubernetes Deployment** showing how to run everything together:
-   - Application container
-   - HAProxy sidecar with SPOE enabled
-   - SPOE agent container
+### Using Helm (Recommended)
 
-### How It Works - The Flow
+1. Add the HAProxy SPOE Sidecar Helm repository:
 
-![Flow](https://assets.magj.dev/haproxy-spoe-sidecar-flow.svg)
+   ```bash
+   helm repo add haproxy-spoe https://yourusername.github.io/haproxy-spoe/
+   helm repo update
+   ```
 
-The diagram shows the complete flow of HTTP requests and responses through the HAProxy SPOE system:
+2. Install the chart:
 
-1. **Initial Request**: The client sends an HTTP request to HAProxy
-2. **Request Event**: HAProxy triggers the `on-frontend-http-request` SPOE event
-3. **SPOE Processing (Request)**: HAProxy sends the request details to the SPOE Agent
-4. **Downstream Forwarding (Request)**: The SPOE Agent forwards the request data to the Event Processor
-5. **Application Processing**: HAProxy proxies the original request to the application
-6. **Response Generation**: The application processes the request and returns a response to HAProxy
-7. **Response Event**: HAProxy triggers the `on-http-response` SPOE event
-8. **SPOE Processing (Response)**: HAProxy sends the response details to the SPOE Agent
-9. **Downstream Forwarding (Response)**: The SPOE Agent forwards the response data to the Event Processor
-10. **Final Response**: HAProxy sends the response back to the client
+   ```bash
+   helm install haproxy-sidecar haproxy-spoe/haproxy-spoe
+   ```
 
-The key benefit of this architecture is that the SPOE processing happens asynchronously and doesn't block the main request/response flow, ensuring minimal performance impact while still capturing all the HTTP traffic.
+3. Customize installation with your own values:
+   ```bash
+   helm install haproxy-sidecar haproxy-spoe/haproxy-spoe -f my-values.yaml
+   ```
 
-### Benefits Over Other Methods
+### Configuration Options
 
-- **Performance**: Minimal impact on main traffic flow
-- **Scalability**: SPOE agents can be scaled independently
-- **Flexibility**: Complete freedom in how you process the data
+The following table lists the configurable parameters of the HAProxy SPOE Sidecar chart and their default values:
 
-### Setup Tips
+| Parameter                      | Description            | Default                                 |
+| ------------------------------ | ---------------------- | --------------------------------------- |
+| `application.name`             | Application name       | `myapp`                                 |
+| `application.image.repository` | Application image      | `your-application-image`                |
+| `application.image.tag`        | Application image tag  | `latest`                                |
+| `application.port`             | Application port       | `8000`                                  |
+| `haproxy.image.repository`     | HAProxy image          | `haproxy`                               |
+| `haproxy.image.tag`            | HAProxy image tag      | `2.7`                                   |
+| `haproxy.port`                 | HAProxy listening port | `8080`                                  |
+| `haproxy.spoe.enabled`         | Enable SPOE            | `true`                                  |
+| `haproxy.spoe.bufferSize`      | SPOE buffer size       | `16384`                                 |
+| `spoeAgent.enabled`            | Enable SPOE agent      | `true`                                  |
+| `spoeAgent.image.repository`   | SPOE agent image       | `python`                                |
+| `spoeAgent.image.tag`          | SPOE agent image tag   | `3.9-slim`                              |
+| `spoeAgent.port`               | SPOE agent port        | `9000`                                  |
+| `spoeAgent.downstream.url`     | Downstream service URL | `http://log-processor:8080/http-events` |
 
-1. **Test the SPOE agent separately** before deploying to production
-2. **Monitor SPOE communication** - add metrics to track latency and errors
-3. **Consider batching** for high-traffic environments
-4. **Implement proper error handling** in your SPOE agent
+## How It Works
+
+The HAProxy SPOE Sidecar implements the following flow:
+
+1. Client sends an HTTP request to HAProxy
+2. HAProxy triggers the `on-frontend-http-request` SPOE event
+3. HAProxy sends the request details to the SPOE Agent
+4. SPOE Agent forwards the request data to the Event Processor
+5. HAProxy proxies the original request to the application
+6. Application processes the request and returns a response to HAProxy
+7. HAProxy triggers the `on-http-response` SPOE event
+8. HAProxy sends the response details to the SPOE Agent
+9. SPOE Agent forwards the response data to the Event Processor
+10. HAProxy sends the response back to the client
+
+This architecture ensures:
+
+- No performance impact on the main request processing
+- Complete capture of both request and response data
+- Scalable processing via the SPOE agent
+
+## Examples
+
+### Basic Configuration
+
+```yaml
+# values.yaml
+application:
+  name: my-webapp
+  image:
+    repository: mycompany/webapp
+    tag: v1.2.3
+  port: 3000
+
+haproxy:
+  spoe:
+    enabled: true
+
+spoeAgent:
+  downstream:
+    url: 'http://event-processor.monitoring.svc.cluster.local:8080/http-events'
+```
+
+### Advanced Configuration
+
+```yaml
+# values.yaml
+application:
+  name: payment-api
+  image:
+    repository: mycompany/payment-api
+    tag: v2.1.0
+  port: 5000
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+haproxy:
+  spoe:
+    enabled: true
+    bufferSize: 32768
+    timeout:
+      hello: 5s
+      idle: 30s
+      processing: 20s
+
+spoeAgent:
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  downstream:
+    url: 'http://event-processor.monitoring.svc.cluster.local:8080/http-events'
+    timeoutSeconds: 10
+```
+
+## Integration with HTTP Event Processor
+
+This HAProxy SPOE Sidecar works best with the [HTTP Event Processor](https://yourusername.github.io/http-event-processor/) for storing and analyzing the captured traffic.
+
+To integrate with the HTTP Event Processor:
+
+1. Install the HTTP Event Processor:
+
+   ```bash
+   helm install event-processor http-event-processor/http-event-processor
+   ```
+
+2. Configure the SPOE agent to forward events:
+   ```yaml
+   # values.yaml
+   spoeAgent:
+     downstream:
+       url: 'http://event-processor.default.svc.cluster.local:8080/http-events'
+   ```
+
+## Customization
+
+### Custom HAProxy Configuration
+
+You can provide custom HAProxy configuration by overriding the ConfigMap values:
+
+```yaml
+# values.yaml
+haproxy:
+  config:
+    customConfig: |
+      # Additional HAProxy configuration
+      maxconn 100000
+      tune.ssl.default-dh-param 2048
+```
+
+### Custom SPOE Agent Logic
+
+You can customize the SPOE agent's processing logic:
+
+```yaml
+# values.yaml
+spoeAgent:
+  config:
+    customProcessing: |
+      # Custom processing logic
+      def process_request(data):
+          # Add custom fields
+          data['environment'] = 'production'
+          return data
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **HAProxy not capturing requests**
+
+   - Verify that SPOE is properly enabled
+   - Check HAProxy logs for any configuration errors
+
+2. **SPOE agent not receiving messages**
+
+   - Ensure HAProxy and SPOE agent containers can communicate
+   - Check SPOE agent logs for connection issues
+
+3. **Events not reaching downstream processor**
+   - Verify the downstream URL is correct
+   - Check network policies allowing the connection
+
+### Debugging
+
+Enable debug logging for more detailed information:
+
+```yaml
+# values.yaml
+haproxy:
+  logLevel: debug
+
+spoeAgent:
+  logLevel: debug
+```
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
