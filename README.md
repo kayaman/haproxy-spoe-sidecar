@@ -34,25 +34,7 @@ SPOE allows HAProxy to offload processing tasks to external agents via a binary 
 
 ### How It Works - The Flow
 
-```mermaid
-sequenceDiagram
-    participant Client
-    participant HAProxy
-    participant SPOEAgent as SPOE Agent
-    participant App as Application
-    participant EventProcessor as Event Processor
-
-    Client->>HAProxy: 1. HTTP Request
-    Note over HAProxy: 2. Triggers on-frontend-http-request event
-    HAProxy->>SPOEAgent: 3. Sends request details
-    SPOEAgent->>EventProcessor: 4. Forwards request data
-    HAProxy->>App: 5. Proxies request
-    App->>HAProxy: 6. HTTP Response
-    Note over HAProxy: 7. Triggers on-http-response event
-    HAProxy->>SPOEAgent: 8. Sends response details
-    SPOEAgent->>EventProcessor: 9. Forwards response data
-    HAProxy->>Client: 10. Sends response
-```
+![Flow](https://assets.magj.dev/haproxy-spoe-sidecar-flow.svg)
 
 The diagram shows the complete flow of HTTP requests and responses through the HAProxy SPOE system:
 
