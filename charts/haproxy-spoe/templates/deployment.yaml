@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: myapp-with-haproxy-spoe
+  name: haproxy-sidecar
 spec:
   replicas: 1
   selector:
@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: myapp
-          image: your-application-image
+          image: haproxy:2.7
           ports:
             - containerPort: 8000
           resources:
@@ -26,19 +26,11 @@ spec:
               memory: 128Mi
 
         - name: haproxy
-          image: haproxy:2.7
+          image: kayaman/haproxy
+          tag: '2.0'
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
-          volumeMounts:
-            - name: haproxy-config
-              mountPath: /usr/local/etc/haproxy/haproxy.cfg
-              subPath: haproxy.cfg
-            - name: haproxy-config
-              mountPath: /usr/local/etc/haproxy/spoe-http-events.conf
-              subPath: spoe-http-events.conf
-            - name: haproxy-config
-              mountPath: /usr/local/etc/haproxy/spoe.lua
-              subPath: spoe.lua
           resources:
             limits:
               cpu: 300m
@@ -48,17 +40,19 @@ spec:
               memory: 128Mi
 
         - name: spoe-agent
-          image: python:3.9-slim
-          command: ["python", "/app/agent.py"]
+          image: kayaman/spoe-agent
+          imagePullPolicy: Always
+          tag: latest
+          # command: ['python', '/app/agent.py']
           ports:
             - containerPort: 9000
-          volumeMounts:
-            - name: spoe-agent-config
-              mountPath: /app/agent.py
-              subPath: agent.py
-            - name: spoe-agent-config
-              mountPath: /app/agent.conf
-              subPath: agent.conf
+          # volumeMounts:
+          #   - name: spoe-agent-config
+          #     mountPath: /app/agent.py
+          #     subPath: agent.py
+          #   - name: spoe-agent-config
+          #     mountPath: /app/agent.conf
+          #     subPath: agent.conf
           resources:
             limits:
               cpu: 200m
@@ -68,7 +62,7 @@ spec:
               memory: 128Mi
           env:
             - name: DOWNSTREAM_URL
-              value: "http://log-processor:8080/http-events"
+              value: 'http://http-event-processor:8080/http-events'
 
       volumes:
         - name: haproxy-config
