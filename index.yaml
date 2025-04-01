@@ -1,5 +1,18 @@
 apiVersion: v1
 entries:
+  haproxy-spoe:
+  - apiVersion: v2
+    appVersion: 1.0.0
+    created: "2025-04-01T15:02:59.212602353Z"
+    description: A Helm chart for deploying an application with HAProxy sidecar on
+      Kubernetes
+    digest: 4e6988f95c6818975961bc32607262d47d4e53faec962e7637ca71e978be4df5
+    icon: https://assets.magj.dev/sidecar.jpg
+    name: haproxy-spoe
+    type: application
+    urls:
+    - https://github.com/kayaman/haproxy-spoe-sidecar/releases/download/haproxy-spoe-0.1.0/haproxy-spoe-0.1.0.tgz
+    version: 0.1.0
   haproxy-spoe-sidecar:
   - apiVersion: v2
     appVersion: 1.0.0
@@ -13,4 +26,4 @@ entries:
     urls:
     - https://github.com/kayaman/haproxy-spoe-sidecar/releases/download/haproxy-spoe-sidecar-0.1.0/haproxy-spoe-sidecar-0.1.0.tgz
     version: 0.1.0
-generated: "2025-03-31T21:50:59.492958988Z"
+generated: "2025-04-01T15:02:59.212607002Z"
